@@ -21,7 +21,6 @@ function Topbar() {
           <NavLink to="/products">Product Centre</NavLink>
           <NavLink to="/weather">Weather & Tide</NavLink>
           <NavLink to="/sales-report">Sales Report</NavLink>
-          <NavLink to="/notifications">Notifications</NavLink>
         </nav>
       </div>
 
