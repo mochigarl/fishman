@@ -139,12 +139,7 @@ function Products() {
 
   return (
     <AdminLayout>
-      <div className="fm-page-header">
-        <div>
-          <h1>Product Centre</h1>
-          <p>Manage product details, stock, pricing and images</p>
-        </div>
-      </div>
+      
 
       <div className="fm-card-topbar" style={{ marginBottom: "24px" }}>
         <div className="fm-card-head-gradient orange-grad">

@@ -4,14 +4,15 @@ import AdminLayout from "../components/AdminLayout"
 
 function Orders() {
   const [orders, setOrders] = useState([])
-  const [statusFilter, setStatusFilter] = useState("All")
+  const [filter, setFilter] = useState("All")
+  const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
 
   const fetchOrders = async () => {
     try {
       setLoading(true)
       const res = await axios.get("http://localhost:5000/api/orders")
-      setOrders(res.data)
+      setOrders(res.data || [])
     } catch (error) {
       console.log("Failed to fetch orders:", error)
     } finally {
@@ -28,190 +29,186 @@ function Orders() {
       await axios.put(`http://localhost:5000/api/orders/${id}`, { status })
       fetchOrders()
     } catch (error) {
-      console.log("Failed to update order:", error)
-      alert(error.response?.data?.error || "Failed to update order")
+      console.log("Failed to update status:", error)
+      alert("Failed to update order status.")
     }
   }
 
   const deleteOrder = async (id) => {
-    const confirmDelete = window.confirm("Delete this order?")
-    if (!confirmDelete) return
+    const confirmed = window.confirm("Are you sure you want to delete this order?")
+    if (!confirmed) return
 
     try {
       await axios.delete(`http://localhost:5000/api/orders/${id}`)
       fetchOrders()
     } catch (error) {
       console.log("Failed to delete order:", error)
-      alert(error.response?.data?.error || "Failed to delete order")
+      alert("Failed to delete order.")
     }
   }
 
   const filteredOrders = useMemo(() => {
-    if (statusFilter === "All") return orders
-    return orders.filter(
-      (order) => String(order.status).toLowerCase() === statusFilter.toLowerCase()
-    )
-  }, [orders, statusFilter])
+    return orders.filter((order) => {
+      const matchesFilter =
+        filter === "All" ? true : order.status?.toLowerCase() === filter.toLowerCase()
 
-  const formatDateTime = (value) => {
-    if (!value) return "-"
-    return new Date(value).toLocaleString("en-MY")
-  }
+      const keyword = search.toLowerCase()
 
-  const getStatusClass = (status) => {
-    const s = String(status || "").toLowerCase()
-    if (s === "completed") return "fm-status completed"
-    if (s === "confirmed") return "fm-status confirmed"
-    if (s === "pending") return "fm-status pending"
-    return "fm-status"
+      const matchesSearch =
+        String(order.customer_name || "").toLowerCase().includes(keyword) ||
+        String(order.phone || "").toLowerCase().includes(keyword) ||
+        String(order.status || "").toLowerCase().includes(keyword) ||
+        String(order.remark || "").toLowerCase().includes(keyword)
+
+      return matchesFilter && matchesSearch
+    })
+  }, [orders, filter, search])
+
+  const renderItems = (items) => {
+    if (!items || !Array.isArray(items) || items.length === 0) return "-"
+
+    return items.map((item, index) => (
+      <div key={index}>
+        {item.name} x {item.quantity}
+      </div>
+    ))
   }
 
   return (
     <AdminLayout>
       <div className="fm-page-header">
-        <div>
-          <h1>Order Centre</h1>
-          <p>Manage customer orders and track order progress</p>
-        </div>
+        <h1>Orders</h1>
+        <p>Manage incoming customer orders and update their status.</p>
       </div>
 
-      <div className="fm-orders-toolbar">
-        <div className="fm-orders-filter-group">
-          <button
-            className={statusFilter === "All" ? "fm-filter-btn active" : "fm-filter-btn"}
-            onClick={() => setStatusFilter("All")}
-          >
-            All
-          </button>
-          <button
-            className={statusFilter === "Pending" ? "fm-filter-btn active" : "fm-filter-btn"}
-            onClick={() => setStatusFilter("Pending")}
-          >
-            Pending
-          </button>
-          <button
-            className={statusFilter === "Confirmed" ? "fm-filter-btn active" : "fm-filter-btn"}
-            onClick={() => setStatusFilter("Confirmed")}
-          >
-            Confirmed
-          </button>
-          <button
-            className={statusFilter === "Completed" ? "fm-filter-btn active" : "fm-filter-btn"}
-            onClick={() => setStatusFilter("Completed")}
-          >
-            Completed
-          </button>
-        </div>
+      <div className="fishman-panel">
+        <div className="panel-body">
+          <div className="fm-orders-toolbar">
+            <div className="fm-orders-left-tools">
+              <input
+                type="text"
+                className="fm-orders-search"
+                placeholder="Search by customer, phone, status, or remark..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
 
-        <button className="fm-refresh-btn" onClick={fetchOrders}>
-          Refresh
-        </button>
-      </div>
+              <div className="fm-orders-filter-group">
+                <button
+                  className={`fm-filter-btn ${filter === "All" ? "active" : ""}`}
+                  onClick={() => setFilter("All")}
+                >
+                  All
+                </button>
+                <button
+                  className={`fm-filter-btn ${filter === "Pending" ? "active" : ""}`}
+                  onClick={() => setFilter("Pending")}
+                >
+                  Pending
+                </button>
+                <button
+                  className={`fm-filter-btn ${filter === "Confirmed" ? "active" : ""}`}
+                  onClick={() => setFilter("Confirmed")}
+                >
+                  Confirmed
+                </button>
+                <button
+                  className={`fm-filter-btn ${filter === "Completed" ? "active" : ""}`}
+                  onClick={() => setFilter("Completed")}
+                >
+                  Completed
+                </button>
+                <button
+                  className={`fm-filter-btn ${filter === "Rejected" ? "active" : ""}`}
+                  onClick={() => setFilter("Rejected")}
+                >
+                  Rejected
+                </button>
+              </div>
+            </div>
 
-      <div className="fm-card-topbar">
-        <div className="fm-card-head-gradient green-grad">
-          Orders List
-        </div>
+            <button className="fm-refresh-btn" onClick={fetchOrders}>
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
 
-        <div className="fm-card-body">
-          {loading ? (
-            <p>Loading orders...</p>
-          ) : filteredOrders.length === 0 ? (
-            <p>No orders found.</p>
-          ) : (
-            <div className="fm-table-wrap">
-              <table className="fm-table-clean fm-orders-table">
-                <thead>
-                  <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th>Phone</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Order Time</th>
-                    <th>Confirmed Time</th>
-                    <th>Completed Time</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
+          <table className="fm-table-clean fm-orders-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Items</th>
+                <th>Remark</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
 
-                <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id}>
-                      <td>#{order.id}</td>
-                      <td>{order.customer_name}</td>
-                      <td>{order.phone}</td>
-
-                      <td>
-                        <div className="fm-order-items-cell">
-                          {Array.isArray(order.items)
-                            ? order.items.map((item, index) => (
-                                <div key={index}>
-                                  {item.name} x {item.quantity}
-                                </div>
-                              ))
-                            : typeof order.items === "string"
-                            ? (() => {
-                                try {
-                                  const parsed = JSON.parse(order.items)
-                                  return parsed.map((item, index) => (
-                                    <div key={index}>
-                                      {item.name} x {item.quantity}
-                                    </div>
-                                  ))
-                                } catch {
-                                  return <div>-</div>
-                                }
-                              })()
-                            : "-"}
-                        </div>
-                      </td>
-
-                      <td>RM {Number(order.total_price).toFixed(2)}</td>
-                      <td>
-                        <span className={getStatusClass(order.status)}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td>{formatDateTime(order.created_at)}</td>
-                      <td>{formatDateTime(order.confirmed_at)}</td>
-                      <td>{formatDateTime(order.completed_at)}</td>
-
-                      <td>
-                        <div className="fm-action-group">
-                          {String(order.status).toLowerCase() === "pending" && (
+            <tbody>
+              {filteredOrders.length > 0 ? (
+                filteredOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td>#{order.id}</td>
+                    <td>{order.customer_name}</td>
+                    <td>{order.phone}</td>
+                    <td className="fm-order-items-cell">{renderItems(order.items)}</td>
+                    <td className="order-remark-cell">{order.remark || "-"}</td>
+                    <td>RM {Number(order.total_price || 0).toFixed(2)}</td>
+                    <td>{order.status}</td>
+                    <td>
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleString("en-MY")
+                        : "-"}
+                    </td>
+                    <td>
+                      <div className="fm-action-group">
+                        {order.status === "Pending" && (
+                          <>
                             <button
                               className="fm-action-btn confirm"
                               onClick={() => updateStatus(order.id, "Confirmed")}
                             >
                               Confirm
                             </button>
-                          )}
 
-                          {String(order.status).toLowerCase() === "confirmed" && (
                             <button
-                              className="fm-action-btn complete"
-                              onClick={() => updateStatus(order.id, "Completed")}
+                              className="fm-action-btn reject"
+                              onClick={() => updateStatus(order.id, "Rejected")}
                             >
-                              Complete
+                              Reject
                             </button>
-                          )}
+                          </>
+                        )}
 
+                        {order.status === "Confirmed" && (
                           <button
-                            className="fm-action-btn delete"
-                            onClick={() => deleteOrder(order.id)}
+                            className="fm-action-btn complete"
+                            onClick={() => updateStatus(order.id, "Completed")}
                           >
-                            Delete
+                            Complete
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                        )}
+
+                        <button
+                          className="fm-action-btn delete"
+                          onClick={() => deleteOrder(order.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="9">No orders found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </AdminLayout>

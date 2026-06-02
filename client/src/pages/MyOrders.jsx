@@ -1,31 +1,24 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import CustomerLayout from "../components/CustomerLayout"
 
 function MyOrders() {
   const location = useLocation()
-  const navigate = useNavigate()
-
   const query = new URLSearchParams(location.search)
   const phone = query.get("phone") || ""
 
   const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState("")
 
   const fetchOrders = async () => {
     if (!phone) return
 
     try {
-      setLoading(true)
-      const res = await axios.get(
-        `http://localhost:5000/api/orders/customer/${encodeURIComponent(phone)}`
-      )
-      setOrders(res.data)
+      const res = await axios.get(`http://localhost:5000/api/orders/phone/${phone}`)
+      setOrders(res.data || [])
     } catch (error) {
-      console.log(error)
-      setOrders([])
-    } finally {
-      setLoading(false)
+      console.log("Failed to fetch orders:", error)
     }
   }
 
@@ -33,66 +26,77 @@ function MyOrders() {
     fetchOrders()
   }, [phone])
 
-  const formatDateTime = (value) => {
-    if (!value) return "-"
-    return new Date(value).toLocaleString()
-  }
-
   return (
-    <div className="customer-home">
-      <div className="customer-header">
-        <div className="customer-header-top">
-          <div>
-            <h1>My Orders</h1>
-            <p className="customer-mode-text">Phone: {phone}</p>
-          </div>
+    <CustomerLayout
+      mode="phone"
+      phone={phone}
+      search={search}
+      onSearchChange={setSearch}
+      cartCount={0}
+    >
+      <div className="cart-page">
+        <div className="cart-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+          <div className="cart-left">
+            <div className="cart-section-head">
+              <h3>My Orders</h3>
+              <p>Phone Number: {phone || "-"}</p>
+            </div>
 
-          <button
-            className="customer-top-btn"
-            onClick={() => navigate(`/order?mode=phone&phone=${encodeURIComponent(phone)}`)}
-          >
-            ← Back to Order
-          </button>
+            {orders.length > 0 ? (
+              orders.map((order) => (
+                <div className="history-order-card" key={order.id}>
+                  <div className="history-order-top">
+                    <div>
+                      <h4>Order #{order.id}</h4>
+                      <p>
+                        Status: <strong>{order.status}</strong>
+                      </p>
+                    </div>
+
+                    <div>
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleString("en-MY")
+                        : "-"}
+                    </div>
+                  </div>
+
+                  <div className="cart-receipt-items">
+                    {Array.isArray(order.items) &&
+                      order.items.map((item, index) => (
+                        <div className="cart-receipt-row" key={index}>
+                          <span>
+                            {item.name} x {item.quantity}
+                          </span>
+                          <span>
+                            RM {(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+
+                  {order.remark && (
+                    <p style={{ marginTop: "12px" }}>
+                      <strong>Remark:</strong> {order.remark}
+                    </p>
+                  )}
+
+                  {order.status === "Rejected" && (
+                    <p className="track-rejected-text">
+                      This order was rejected by admin.
+                    </p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="cart-empty-box">
+                <h4>No orders found</h4>
+                <p>No order history found for this phone number.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="cart-section">
-        <h2>Order History</h2>
-
-        {loading ? (
-          <p>Loading orders...</p>
-        ) : orders.length === 0 ? (
-          <p>No orders found for this phone number.</p>
-        ) : (
-          orders.map((order) => (
-            <div key={order.id} className="history-order-card">
-              <div className="history-order-top">
-                <div>
-                  <h3>Order #{order.id}</h3>
-                  <p>Status: {order.status}</p>
-                </div>
-                <div>
-                  <strong>RM {Number(order.total_price).toFixed(2)}</strong>
-                </div>
-              </div>
-
-              <p><strong>Order Time:</strong> {formatDateTime(order.created_at)}</p>
-              <p><strong>Confirmed Time:</strong> {formatDateTime(order.confirmed_at)}</p>
-              <p><strong>Completed Time:</strong> {formatDateTime(order.completed_at)}</p>
-
-              <div className="receipt-items">
-                {order.items.map((item, index) => (
-                  <div key={index} className="receipt-item-row">
-                    <span>{item.name} x {item.quantity}</span>
-                    <span>RM {(Number(item.price) * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+    </CustomerLayout>
   )
 }
 

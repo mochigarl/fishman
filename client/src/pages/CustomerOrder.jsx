@@ -21,6 +21,10 @@ function CustomerOrder() {
       : "fishman_cart_guest"
   }, [mode, phone])
 
+  const getStorage = () => {
+    return mode === "guest" ? sessionStorage : localStorage
+  }
+
   const fetchProducts = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/products")
@@ -31,7 +35,8 @@ function CustomerOrder() {
   }
 
   const refreshCartCount = () => {
-    const saved = JSON.parse(localStorage.getItem(cartKey) || "[]")
+    const storage = getStorage()
+    const saved = JSON.parse(storage.getItem(cartKey) || "[]")
     const totalQty = saved.reduce((sum, item) => sum + Number(item.quantity), 0)
     setCartCount(totalQty)
   }
@@ -42,7 +47,8 @@ function CustomerOrder() {
   }, [cartKey])
 
   const addToCart = (product) => {
-    const saved = JSON.parse(localStorage.getItem(cartKey) || "[]")
+    const storage = getStorage()
+    const saved = JSON.parse(storage.getItem(cartKey) || "[]")
     const existing = saved.find((item) => item.id === product.id)
 
     let updatedCart = []
@@ -66,7 +72,7 @@ function CustomerOrder() {
       }
     }
 
-    localStorage.setItem(cartKey, JSON.stringify(updatedCart))
+    storage.setItem(cartKey, JSON.stringify(updatedCart))
     refreshCartCount()
   }
 

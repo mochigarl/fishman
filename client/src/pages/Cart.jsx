@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useState } from "react"
 import axios from "axios"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import CustomerLayout from "../components/CustomerLayout"
 
 function Cart() {
   const location = useLocation()
-  const navigate = useNavigate()
 
   const query = new URLSearchParams(location.search)
   const mode = query.get("mode") || "guest"
   const phoneParam = query.get("phone") || ""
 
+  const [search, setSearch] = useState("")
   const [cart, setCart] = useState([])
   const [customer, setCustomer] = useState({
     name: "",
-    phone: phoneParam
+    phone: phoneParam,
+    remark: ""
   })
-
   const [receipt, setReceipt] = useState(null)
 
   const cartKey = useMemo(() => {
@@ -24,8 +25,13 @@ function Cart() {
       : "fishman_cart_guest"
   }, [mode, phoneParam])
 
+  const getStorage = () => {
+    return mode === "guest" ? sessionStorage : localStorage
+  }
+
   const loadCart = () => {
-    const saved = JSON.parse(localStorage.getItem(cartKey) || "[]")
+    const storage = getStorage()
+    const saved = JSON.parse(storage.getItem(cartKey) || "[]")
     setCart(saved)
   }
 
@@ -34,7 +40,8 @@ function Cart() {
   }, [cartKey])
 
   const saveCart = (updatedCart) => {
-    localStorage.setItem(cartKey, JSON.stringify(updatedCart))
+    const storage = getStorage()
+    storage.setItem(cartKey, JSON.stringify(updatedCart))
     setCart(updatedCart)
   }
 
@@ -71,13 +78,23 @@ function Cart() {
   }
 
   const totalPrice = cart.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
+    (sum, item) => sum + Number(item.price) * Number(item.quantity),
+    0
+  )
+
+  const cartCount = cart.reduce(
+    (sum, item) => sum + Number(item.quantity),
     0
   )
 
   const submitOrder = async () => {
-    if (!customer.name || !customer.phone || cart.length === 0) {
-      alert("Please fill in name, phone number, and cart.")
+    if (!customer.name.trim() || !customer.phone.trim()) {
+      alert("Please fill in your name and phone number.")
+      return
+    }
+
+    if (cart.length === 0) {
+      alert("Your cart is empty.")
       return
     }
 
@@ -93,20 +110,29 @@ function Cart() {
         customer_name: customer.name,
         phone: customer.phone,
         items: orderItems,
-        total_price: totalPrice
+        total_price: totalPrice,
+        remark: customer.remark
       })
 
       setReceipt({
         orderId: res.data.id,
         customerName: customer.name,
         phone: customer.phone,
+        remark: customer.remark,
         items: orderItems,
         total: totalPrice,
         submittedAt: new Date().toLocaleString()
       })
 
-      localStorage.removeItem(cartKey)
+      const storage = getStorage()
+      storage.removeItem(cartKey)
+
       setCart([])
+      setCustomer({
+        name: "",
+        phone: phoneParam,
+        remark: ""
+      })
     } catch (error) {
       console.log(error)
       alert(error.response?.data?.error || "Failed to submit order.")
@@ -114,106 +140,159 @@ function Cart() {
   }
 
   return (
-    <div className="customer-home">
-      <div className="customer-header">
-        <div className="customer-header-top">
-          <div>
-            <h1>FishMan Cart</h1>
-            <p className="customer-mode-text">
-              {mode === "phone" ? `Phone Mode: ${phoneParam}` : "Guest Mode"}
-            </p>
+    <CustomerLayout
+      mode={mode}
+      phone={phoneParam}
+      search={search}
+      onSearchChange={setSearch}
+      cartCount={cartCount}
+    >
+      <div className="cart-page">
+        <div className="cart-wrapper">
+          <div className="cart-left">
+            <div className="cart-section-head">
+              <h3>Your Cart</h3>
+              <p>{cart.length} item(s) in cart</p>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="cart-empty-box">
+                <h4>Your cart is empty</h4>
+                <p>Add some seafood from the product page first.</p>
+              </div>
+            ) : (
+              <div className="cart-item-list">
+                {cart.map((item) => (
+                  <div className="cart-item-card" key={item.id}>
+                    <div className="cart-item-image-wrap">
+                      {item.image ? (
+                        <img
+                          src={`http://localhost:5000/uploads/${item.image}`}
+                          alt={item.name}
+                          className="cart-item-image"
+                        />
+                      ) : (
+                        <div className="cart-item-no-image">No Image</div>
+                      )}
+                    </div>
+
+                    <div className="cart-item-info">
+                      <h4>{item.name}</h4>
+                      <p>{item.category || "Fresh seafood"}</p>
+                      <strong>RM {Number(item.price).toFixed(2)}</strong>
+                    </div>
+
+                    <div className="cart-item-controls">
+                      <div className="cart-qty-box">
+                        <button onClick={() => decreaseQty(item.id)}>-</button>
+                        <span>{item.quantity}</span>
+                        <button onClick={() => increaseQty(item.id)}>+</button>
+                      </div>
+
+                      <div className="cart-subtotal">
+                        RM {(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                      </div>
+
+                      <button
+                        className="cart-remove-btn"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button
-            className="customer-top-btn"
-            onClick={() =>
-              navigate(
-                `/order?mode=${mode}${phoneParam ? `&phone=${encodeURIComponent(phoneParam)}` : ""}`
-              )
-            }
-          >
-            ← Back to Order
-          </button>
-        </div>
-      </div>
+          <div className="cart-right">
+            <div className="cart-side-card">
+              <div className="cart-section-head">
+                <h3>Checkout</h3>
+                <p>Fill in your details</p>
+              </div>
 
-      <div className="cart-section">
-        <h2>Your Cart</h2>
+              <div className="cart-form-group">
+                <label>Your Name</label>
+                <input
+                  type="text"
+                  value={customer.name}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, name: e.target.value })
+                  }
+                  placeholder="Enter your name"
+                />
+              </div>
 
-        <input
-          type="text"
-          placeholder="Your name"
-          value={customer.name}
-          onChange={(e) =>
-            setCustomer({ ...customer, name: e.target.value })
-          }
-        />
+              <div className="cart-form-group">
+                <label>Phone Number</label>
+                <input
+                  type="text"
+                  value={customer.phone}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, phone: e.target.value })
+                  }
+                  placeholder="Enter your phone number"
+                />
+              </div>
 
-        <input
-          type="text"
-          placeholder="Phone number"
-          value={customer.phone}
-          onChange={(e) =>
-            setCustomer({ ...customer, phone: e.target.value })
-          }
-        />
+              <div className="cart-form-group">
+                <label>Remark</label>
+                <textarea
+                  value={customer.remark}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, remark: e.target.value })
+                  }
+                  placeholder="Example: clean the fish, separate packing, pickup at 5 PM"
+                  rows="4"
+                />
+              </div>
 
-        {cart.length === 0 ? (
-          <p>No items in cart.</p>
-        ) : (
-          <>
-            {cart.map((item) => (
-              <div key={item.id} className="cart-item">
-                <div>
-                  <strong>{item.name}</strong>
-                  <p>RM {item.price}</p>
+              <div className="cart-summary-box">
+                <div className="cart-summary-line">
+                  <span>Total Items</span>
+                  <strong>{cartCount}</strong>
                 </div>
 
-                <div className="cart-actions">
-                  <button onClick={() => decreaseQty(item.id)}>-</button>
-                  <span>{item.quantity}</span>
-                  <button onClick={() => increaseQty(item.id)}>+</button>
-                  <button
-                    className="delete-btn"
-                    onClick={() => removeItem(item.id)}
-                  >
-                    Remove
-                  </button>
+                <div className="cart-summary-line total">
+                  <span>Total Price</span>
+                  <strong>RM {totalPrice.toFixed(2)}</strong>
                 </div>
               </div>
-            ))}
 
-            <h3>Total: RM {totalPrice.toFixed(2)}</h3>
+              <button className="cart-submit-btn" onClick={submitOrder}>
+                Submit Order
+              </button>
+            </div>
+          </div>
+        </div>
 
-            <button className="submit-order-btn" onClick={submitOrder}>
-              Submit Order
-            </button>
-          </>
+        {receipt && (
+          <div className="cart-receipt-card">
+            <h3>Order Submitted Successfully</h3>
+            <p><strong>Order ID:</strong> #{receipt.orderId}</p>
+            <p><strong>Name:</strong> {receipt.customerName}</p>
+            <p><strong>Phone:</strong> {receipt.phone}</p>
+            <p><strong>Remark:</strong> {receipt.remark || "-"}</p>
+            <p><strong>Submitted At:</strong> {receipt.submittedAt}</p>
+
+            <div className="cart-receipt-items">
+              {receipt.items.map((item, index) => (
+                <div className="cart-receipt-row" key={index}>
+                  <span>{item.name} x {item.quantity}</span>
+                  <span>RM {(Number(item.price) * Number(item.quantity)).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="cart-receipt-total">
+              Total Paid: RM {receipt.total.toFixed(2)}
+            </div>
+          </div>
         )}
       </div>
-
-      {receipt && (
-        <div className="receipt-card">
-          <h2>Order Submitted Successfully</h2>
-          <p><strong>Order ID:</strong> #{receipt.orderId}</p>
-          <p><strong>Name:</strong> {receipt.customerName}</p>
-          <p><strong>Phone:</strong> {receipt.phone}</p>
-          <p><strong>Submitted At:</strong> {receipt.submittedAt}</p>
-
-          <div className="receipt-items">
-            <h3>Items</h3>
-            {receipt.items.map((item, index) => (
-              <div key={index} className="receipt-item-row">
-                <span>{item.name} x {item.quantity}</span>
-                <span>RM {(Number(item.price) * item.quantity).toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-
-          <h3>Total Paid: RM {receipt.total.toFixed(2)}</h3>
-        </div>
-      )}
-    </div>
+    </CustomerLayout>
   )
 }
 

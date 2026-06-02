@@ -10,7 +10,7 @@ const getOrders = (req, res) => {
 
     const orders = result.map((order) => ({
       ...order,
-      items: JSON.parse(order.items)
+      items: typeof order.items === "string" ? JSON.parse(order.items) : order.items
     }))
 
     res.json(orders)
@@ -18,102 +18,111 @@ const getOrders = (req, res) => {
 }
 
 const addOrder = (req, res) => {
-  const { customer_name, phone, items, total_price } = req.body
+  const { customer_name, phone, items, total_price, remark } = req.body
 
-  if (!customer_name || !phone || !items || items.length === 0) {
-    return res.status(400).json({ error: "Incomplete order data" })
+  if (!customer_name || !phone || !items || !total_price) {
+    return res.status(400).json({ error: "Missing required fields" })
   }
 
-  const productIds = items.map((item) => item.product_id)
+  const itemsJson = JSON.stringify(items)
 
-  const selectSql = `SELECT * FROM products WHERE id IN (${productIds
-    .map(() => "?")
-    .join(",")})`
+  const stockCheckPromises = items.map((item) => {
+    return new Promise((resolve, reject) => {
+      db.query(
+        "SELECT stock, name FROM products WHERE id = ?",
+        [item.product_id],
+        (err, result) => {
+          if (err) return reject(err)
+          if (result.length === 0) {
+            return reject(new Error(`Product not found: ${item.name}`))
+          }
 
-  db.query(selectSql, productIds, (err, products) => {
-    if (err) {
-      return res.status(500).json({ error: err.message })
-    }
+          const availableStock = Number(result[0].stock)
+          if (item.quantity > availableStock) {
+            return reject(
+              new Error(
+                `Not enough stock for ${result[0].name}. Available: ${availableStock}`
+              )
+            )
+          }
 
-    for (const item of items) {
-      const product = products.find((p) => p.id === item.product_id)
-
-      if (!product) {
-        return res.status(400).json({ error: `Product not found: ${item.name}` })
-      }
-
-      const currentStock = Number(product.stock)
-      const orderedQty = Number(item.quantity)
-
-      if (product.status === "Out of Stock" || currentStock < orderedQty) {
-        return res.status(400).json({
-          error: `Insufficient stock for ${item.name}`
-        })
-      }
-    }
-
-    const insertOrderSql =
-      "INSERT INTO orders (customer_name, phone, items, total_price, status) VALUES (?, ?, ?, ?, ?)"
-
-    db.query(
-      insertOrderSql,
-      [customer_name, phone, JSON.stringify(items), total_price, "Pending"],
-      (insertErr, result) => {
-        if (insertErr) {
-          return res.status(500).json({ error: insertErr.message })
+          resolve()
         }
-
-        let completedUpdates = 0
-
-        for (const item of items) {
-          const product = products.find((p) => p.id === item.product_id)
-          const newStock = Number(product.stock) - Number(item.quantity)
-          const newStatus = newStock <= 0 ? "Out of Stock" : "Available"
-
-          const updateStockSql =
-            "UPDATE products SET stock = ?, status = ? WHERE id = ?"
-
-          db.query(
-            updateStockSql,
-            [newStock, newStatus, item.product_id],
-            (updateErr) => {
-              if (updateErr) {
-                return res.status(500).json({ error: updateErr.message })
-              }
-
-              completedUpdates++
-
-              if (completedUpdates === items.length) {
-                return res.json({
-                  message: "Order submitted successfully and stock updated",
-                  id: result.insertId
-                })
-              }
-            }
-          )
-        }
-      }
-    )
+      )
+    })
   })
+
+  Promise.all(stockCheckPromises)
+    .then(() => {
+      const sql = `
+        INSERT INTO orders (customer_name, phone, items, total_price, status, remark, created_at)
+        VALUES (?, ?, ?, ?, 'Pending', ?, NOW())
+      `
+
+      db.query(
+        sql,
+        [customer_name, phone, itemsJson, total_price, remark || null],
+        (err, result) => {
+          if (err) {
+            return res.status(500).json({ error: err.message })
+          }
+
+          const updateStockPromises = items.map((item) => {
+            return new Promise((resolve, reject) => {
+              db.query(
+                "UPDATE products SET stock = stock - ? WHERE id = ?",
+                [item.quantity, item.product_id],
+                (err2) => {
+                  if (err2) return reject(err2)
+                  resolve()
+                }
+              )
+            })
+          })
+
+          Promise.all(updateStockPromises)
+            .then(() => {
+              db.query(
+                "UPDATE products SET status = 'Out of Stock' WHERE stock <= 0"
+              )
+
+              res.json({
+                message: "Order submitted successfully",
+                id: result.insertId
+              })
+            })
+            .catch((stockErr) => {
+              res.status(500).json({ error: stockErr.message })
+            })
+        }
+      )
+    })
+    .catch((error) => {
+      res.status(400).json({ error: error.message })
+    })
 }
 
 const updateOrderStatus = (req, res) => {
   const { id } = req.params
   const { status } = req.body
 
-  let sql = ""
-  let values = []
+  let sql = "UPDATE orders SET status = ?"
+  const values = [status]
 
   if (status === "Confirmed") {
-    sql = "UPDATE orders SET status = ?, confirmed_at = NOW() WHERE id = ?"
-    values = [status, id]
-  } else if (status === "Completed") {
-    sql = "UPDATE orders SET status = ?, completed_at = NOW() WHERE id = ?"
-    values = [status, id]
-  } else {
-    sql = "UPDATE orders SET status = ? WHERE id = ?"
-    values = [status, id]
+    sql += ", confirmed_at = NOW()"
   }
+
+  if (status === "Completed") {
+    sql += ", completed_at = NOW()"
+  }
+
+  if (status === "Rejected") {
+    sql += ", rejected_at = NOW()"
+  }
+
+  sql += " WHERE id = ?"
+  values.push(id)
 
   db.query(sql, values, (err) => {
     if (err) {
@@ -127,9 +136,7 @@ const updateOrderStatus = (req, res) => {
 const deleteOrder = (req, res) => {
   const { id } = req.params
 
-  const sql = "DELETE FROM orders WHERE id = ?"
-
-  db.query(sql, [id], (err) => {
+  db.query("DELETE FROM orders WHERE id = ?", [id], (err) => {
     if (err) {
       return res.status(500).json({ error: err.message })
     }
@@ -137,6 +144,7 @@ const deleteOrder = (req, res) => {
     res.json({ message: "Order deleted successfully" })
   })
 }
+
 const getOrdersByPhone = (req, res) => {
   const { phone } = req.params
 
@@ -149,12 +157,13 @@ const getOrdersByPhone = (req, res) => {
 
     const orders = result.map((order) => ({
       ...order,
-      items: JSON.parse(order.items)
+      items: typeof order.items === "string" ? JSON.parse(order.items) : order.items
     }))
 
     res.json(orders)
   })
 }
+
 module.exports = {
   getOrders,
   addOrder,

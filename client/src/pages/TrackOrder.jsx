@@ -1,127 +1,133 @@
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation } from "react-router-dom"
+import CustomerLayout from "../components/CustomerLayout"
 
 function TrackOrder() {
   const location = useLocation()
-  const navigate = useNavigate()
-
   const query = new URLSearchParams(location.search)
   const phone = query.get("phone") || ""
 
-  const [latestOrder, setLatestOrder] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [orders, setOrders] = useState([])
+  const [search, setSearch] = useState("")
 
-  const fetchLatestOrder = async () => {
+  const fetchOrders = async () => {
     if (!phone) return
 
     try {
-      setLoading(true)
-      const res = await axios.get(
-        `http://localhost:5000/api/orders/customer/${encodeURIComponent(phone)}`
-      )
-
-      if (res.data.length > 0) {
-        setLatestOrder(res.data[0])
-      } else {
-        setLatestOrder(null)
-      }
+      const res = await axios.get(`http://localhost:5000/api/orders/phone/${phone}`)
+      setOrders(res.data || [])
     } catch (error) {
-      console.log(error)
-      setLatestOrder(null)
-    } finally {
-      setLoading(false)
+      console.log("Failed to fetch orders:", error)
     }
   }
 
   useEffect(() => {
-    fetchLatestOrder()
+    fetchOrders()
   }, [phone])
 
-  const formatDateTime = (value) => {
-    if (!value) return "-"
-    return new Date(value).toLocaleString()
-  }
+  const getStepClass = (orderStatus, step) => {
+    if (orderStatus === "Rejected") {
+      return step === "Rejected" ? "track-step active rejected" : "track-step"
+    }
 
-  const getStepClass = (status, step) => {
-    const orderFlow = ["Pending", "Confirmed", "Completed"]
-    return orderFlow.indexOf(status) >= orderFlow.indexOf(step)
-      ? "track-step active"
-      : "track-step"
+    if (orderStatus === "Pending") {
+      return step === "Pending" ? "track-step active" : "track-step"
+    }
+
+    if (orderStatus === "Confirmed") {
+      return step === "Pending" || step === "Confirmed"
+        ? "track-step active"
+        : "track-step"
+    }
+
+    if (orderStatus === "Completed") {
+      return step === "Pending" || step === "Confirmed" || step === "Completed"
+        ? "track-step active"
+        : "track-step"
+    }
+
+    return "track-step"
   }
 
   return (
-    <div className="customer-home">
-      <div className="customer-header">
-        <div className="customer-header-top">
-          <div>
-            <h1>Track Order</h1>
-            <p className="customer-mode-text">Phone: {phone}</p>
-          </div>
+    <CustomerLayout
+      mode="phone"
+      phone={phone}
+      search={search}
+      onSearchChange={setSearch}
+      cartCount={0}
+    >
+      <div className="cart-page">
+        <div className="cart-wrapper" style={{ gridTemplateColumns: "1fr" }}>
+          <div className="cart-left">
+            <div className="cart-section-head">
+              <h3>Track Order</h3>
+              <p>Phone Number: {phone || "-"}</p>
+            </div>
 
-          <button
-            className="customer-top-btn"
-            onClick={() => navigate(`/order?mode=phone&phone=${encodeURIComponent(phone)}`)}
-          >
-            ← Back to Order
-          </button>
+            {orders.length > 0 ? (
+              orders.map((order) => (
+                <div className="history-order-card" key={order.id}>
+                  <div className="history-order-top">
+                    <div>
+                      <h4>Order #{order.id}</h4>
+                      <p>
+                        Status: <strong>{order.status}</strong>
+                      </p>
+                    </div>
+                    <div>
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleString("en-MY")
+                        : "-"}
+                    </div>
+                  </div>
+
+                  <div className="track-progress">
+                    <div className={getStepClass(order.status, "Pending")}>
+                      <span>1</span>
+                      <p>Pending</p>
+                    </div>
+
+                    <div className={getStepClass(order.status, "Confirmed")}>
+                      <span>2</span>
+                      <p>Confirmed</p>
+                    </div>
+
+                    <div className={getStepClass(order.status, "Completed")}>
+                      <span>3</span>
+                      <p>Completed</p>
+                    </div>
+
+                    <div className={getStepClass(order.status, "Rejected")}>
+                      <span>!</span>
+                      <p>Rejected</p>
+                    </div>
+                  </div>
+
+                  {order.remark && (
+                    <p>
+                      <strong>Remark:</strong> {order.remark}
+                    </p>
+                  )}
+
+                  {order.status === "Rejected" && (
+                    <p className="track-rejected-text">
+                      This order was rejected by admin. Please contact seller for more details.
+                    </p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="cart-empty-box">
+                <h4>No orders found</h4>
+                <p>No order records found for this phone number.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="cart-section">
-        <h2>Latest Order Status</h2>
-
-        {loading ? (
-          <p>Loading order...</p>
-        ) : !latestOrder ? (
-          <p>No order found for this phone number.</p>
-        ) : (
-          <>
-            <div className="history-order-card">
-              <div className="history-order-top">
-                <div>
-                  <h3>Order #{latestOrder.id}</h3>
-                  <p>Status: {latestOrder.status}</p>
-                </div>
-                <div>
-                  <strong>RM {Number(latestOrder.total_price).toFixed(2)}</strong>
-                </div>
-              </div>
-
-              <div className="track-progress">
-                <div className={getStepClass(latestOrder.status, "Pending")}>
-                  <span>1</span>
-                  <p>Order Received</p>
-                </div>
-
-                <div className={getStepClass(latestOrder.status, "Confirmed")}>
-                  <span>2</span>
-                  <p>Confirmed</p>
-                </div>
-
-                <div className={getStepClass(latestOrder.status, "Completed")}>
-                  <span>3</span>
-                  <p>Completed</p>
-                </div>
-              </div>
-
-              <p><strong>Order Time:</strong> {formatDateTime(latestOrder.created_at)}</p>
-              <p><strong>Confirmed Time:</strong> {formatDateTime(latestOrder.confirmed_at)}</p>
-              <p><strong>Completed Time:</strong> {formatDateTime(latestOrder.completed_at)}</p>
-
-              <div className="receipt-items">
-                {latestOrder.items.map((item, index) => (
-                  <div key={index} className="receipt-item-row">
-                    <span>{item.name} x {item.quantity}</span>
-                    <span>RM {(Number(item.price) * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+    </CustomerLayout>
   )
 }
 

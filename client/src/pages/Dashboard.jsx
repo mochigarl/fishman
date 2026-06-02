@@ -45,12 +45,6 @@ function Dashboard() {
 
   return (
     <AdminLayout>
-      <div className="fm-page-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p>FishMan Admin Panel</p>
-        </div>
-      </div>
 
       <div className="fm-stats-grid-simple">
         <div

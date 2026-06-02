@@ -12,9 +12,11 @@ function SalesReport() {
       totalOrders: 0,
       averageOrder: 0
     },
-    rows: []
+    rows: [],
+    topProducts: []
   })
   const [loading, setLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState("")
 
   const fetchReport = async (reportType = type) => {
     try {
@@ -23,6 +25,7 @@ function SalesReport() {
         `http://localhost:5000/api/sales-report?type=${reportType}`
       )
       setReport(res.data)
+      setLastUpdated(new Date().toLocaleString("en-MY"))
     } catch (error) {
       console.log("Failed to fetch sales report:", error)
     } finally {
@@ -49,11 +52,11 @@ function SalesReport() {
     doc.text(`Generated At: ${new Date().toLocaleString()}`, 14, 35)
 
     doc.text(
-      `Total Sales: RM ${Number(report.summary.totalSales).toFixed(2)}`,
+      `Total Completed Sales: RM ${Number(report.summary.totalSales).toFixed(2)}`,
       14,
       48
     )
-    doc.text(`Total Orders: ${report.summary.totalOrders}`, 14, 55)
+    doc.text(`Total Completed Orders: ${report.summary.totalOrders}`, 14, 55)
     doc.text(
       `Average Order Value: RM ${Number(report.summary.averageOrder).toFixed(2)}`,
       14,
@@ -62,11 +65,23 @@ function SalesReport() {
 
     autoTable(doc, {
       startY: 72,
-      head: [["Period", "Orders", "Total Sales (RM)"]],
+      head: [["Period", "Completed Orders", "Total Sales (RM)"]],
       body: report.rows.map((item) => [
         item.label,
         item.orders,
         Number(item.sales).toFixed(2)
+      ])
+    })
+
+    const nextY = doc.lastAutoTable.finalY + 12
+
+    autoTable(doc, {
+      startY: nextY,
+      head: [["Top Product", "Quantity Sold", "Sales (RM)"]],
+      body: (report.topProducts || []).map((item) => [
+        item.name,
+        item.totalQuantity,
+        Number(item.totalSales).toFixed(2)
       ])
     })
 
@@ -75,12 +90,7 @@ function SalesReport() {
 
   return (
     <AdminLayout>
-      <div className="fm-page-header">
-        <div>
-          <h1>Sales Report</h1>
-          <p>View real sales performance by period</p>
-        </div>
-      </div>
+      
 
       <div className="fm-card-topbar" style={{ marginBottom: "24px" }}>
         <div className="fm-card-head-gradient blue-grad">Report Type</div>
@@ -122,43 +132,55 @@ function SalesReport() {
         <div className="fm-stat-card-simple stat-yellow">
           <p>Total Sales</p>
           <h2>RM {Number(report.summary.totalSales).toFixed(2)}</h2>
-          <span>{titleLabel} report</span>
+          <span>{titleLabel} completed sales</span>
         </div>
 
         <div className="fm-stat-card-simple stat-pink">
           <p>Total Orders</p>
           <h2>{report.summary.totalOrders}</h2>
-          <span>{titleLabel} report</span>
+          <span>{titleLabel} completed orders</span>
         </div>
 
         <div className="fm-stat-card-simple stat-blue">
           <p>Average Order</p>
           <h2>RM {Number(report.summary.averageOrder).toFixed(2)}</h2>
-          <span>{titleLabel} report</span>
+          <span>{titleLabel} average value</span>
         </div>
       </div>
 
-      <div className="fm-card-topbar">
-        <div className="fm-card-head-gradient green-grad">Sales Table</div>
+      <div className="fm-dashboard-grid-topbar">
+        <div className="fm-card-topbar">
+          <div className="fm-card-head-gradient green-grad">Sales Table</div>
 
-        <div className="fm-card-body">
-          <div className="fm-sales-toolbar">
-            <button className="fm-open-page-btn" onClick={generatePDF}>
-              Generate PDF Report
-            </button>
-          </div>
+          <div className="fm-card-body">
+            <div
+              className="fm-sales-toolbar"
+              style={{ justifyContent: "space-between", alignItems: "center" }}
+            >
+              <p style={{ margin: 0, color: "#6b7280" }}>
+                Last updated: {lastUpdated || "-"}
+              </p>
 
-          {loading ? (
-            <p>Loading report...</p>
-          ) : report.rows.length === 0 ? (
-            <p>No sales data found.</p>
-          ) : (
-            <div className="fm-table-wrap">
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button className="fm-open-page-btn" onClick={() => fetchReport(type)}>
+                  Refresh
+                </button>
+                <button className="fm-open-page-btn" onClick={generatePDF}>
+                  Generate PDF Report
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <p>Loading report...</p>
+            ) : report.rows.length === 0 ? (
+              <p>No completed sales data found.</p>
+            ) : (
               <table className="fm-table-clean">
                 <thead>
                   <tr>
                     <th>Period</th>
-                    <th>Orders</th>
+                    <th>Completed Orders</th>
                     <th>Total Sales</th>
                   </tr>
                 </thead>
@@ -172,8 +194,48 @@ function SalesReport() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+
+        <div className="fm-card-topbar">
+          <div className="fm-card-head-gradient orange-grad">Top Selling Products</div>
+
+          <div className="fm-card-body">
+            {loading ? (
+              <p>Loading top products...</p>
+            ) : report.topProducts?.length > 0 ? (
+              <div className="top-products-list">
+                {report.topProducts.map((product, index) => (
+                  <div key={index} className="fm-product-row">
+                    <div className="fm-product-row-top">
+                      <strong>{product.name}</strong>
+                      <span>{product.totalQuantity} sold</span>
+                    </div>
+
+                    <div className="fm-progress-bar">
+                      <div
+                        className="fm-progress-fill"
+                        style={{
+                          width: `${
+                            report.topProducts[0]?.totalQuantity
+                              ? (product.totalQuantity / report.topProducts[0].totalQuantity) * 100
+                              : 0
+                          }%`
+                        }}
+                      />
+                    </div>
+
+                    <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+                      RM {Number(product.totalSales).toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No top-selling product data found.</p>
+            )}
+          </div>
         </div>
       </div>
     </AdminLayout>
