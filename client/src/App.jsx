@@ -6,6 +6,7 @@ import Products from "./pages/Products"
 import Weather from "./pages/Weather"
 import SalesReport from "./pages/SalesReport"
 import Notifications from "./pages/Notifications"
+import CustomerEntry from "./pages/CustomerEntry"
 import CustomerOrder from "./pages/CustomerOrder"
 import Cart from "./pages/Cart"
 import TrackOrder from "./pages/TrackOrder"
@@ -72,6 +73,7 @@ function App() {
           }
         />
 
+        <Route path="/customer-entry" element={<CustomerEntry />} />
         <Route path="/order" element={<CustomerOrder />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/track-order" element={<TrackOrder />} />
