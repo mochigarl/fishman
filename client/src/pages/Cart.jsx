@@ -141,8 +141,8 @@ function Cart() {
 
       alert(
         error.response?.data?.error ||
-        error.message ||
-        "Failed to submit order."
+          error.message ||
+          "Failed to submit order."
       )
     }
   }
@@ -178,9 +178,6 @@ function Cart() {
                           src={`${API_BASE}/uploads/${item.image}`}
                           alt={item.name}
                           className="cart-item-image"
-                          onError={(e) => {
-                            console.log("Image failed:", `${API_BASE}/uploads/${item.image}`)
-                          }}
                         />
                       ) : (
                         <div className="cart-item-no-image">No Image</div>
