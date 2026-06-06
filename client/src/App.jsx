@@ -17,8 +17,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<CustomerEntry />} />
-        <Route path="/admin-login" element={<Login />} />
+        <Route path="/" element={<Login />} />
+        <Route path="/customer-entry" element={<CustomerEntry />} />
 
         <Route
           path="/dashboard"
@@ -74,7 +74,6 @@ function App() {
           }
         />
 
-        <Route path="/customer-entry" element={<CustomerEntry />} />
         <Route path="/order" element={<CustomerOrder />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/track-order" element={<TrackOrder />} />
