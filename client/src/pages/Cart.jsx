@@ -101,10 +101,11 @@ function Cart() {
 
     try {
       const orderItems = cart.map((item) => ({
-        product_id: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price
+  product_id: item.id,
+  name: item.name,
+  quantity: item.quantity,
+  price: item.price,
+  image: item.image || null
       }))
 
       const res = await axios.post(`${API_BASE}/api/orders`, {
