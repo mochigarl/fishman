@@ -5,6 +5,7 @@ import CustomerLayout from "../components/CustomerLayout"
 
 function Cart() {
   const location = useLocation()
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
 
   const query = new URLSearchParams(location.search)
   const mode = query.get("mode") || "guest"
@@ -106,7 +107,7 @@ function Cart() {
         price: item.price
       }))
 
-      const res = await axios.post("http://localhost:5000/api/orders", {
+      const res = await axios.post(`${API_BASE}/api/orders`, {
         customer_name: customer.name,
         phone: customer.phone,
         items: orderItems,
@@ -134,8 +135,15 @@ function Cart() {
         remark: ""
       })
     } catch (error) {
-      console.log(error)
-      alert(error.response?.data?.error || "Failed to submit order.")
+      console.log("Submit order error:", error)
+      console.log("Response data:", error.response?.data)
+      console.log("Status:", error.response?.status)
+
+      alert(
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to submit order."
+      )
     }
   }
 
@@ -167,9 +175,12 @@ function Cart() {
                     <div className="cart-item-image-wrap">
                       {item.image ? (
                         <img
-                          src={`http://localhost:5000/uploads/${item.image}`}
+                          src={`${API_BASE}/uploads/${item.image}`}
                           alt={item.name}
                           className="cart-item-image"
+                          onError={(e) => {
+                            console.log("Image failed:", `${API_BASE}/uploads/${item.image}`)
+                          }}
                         />
                       ) : (
                         <div className="cart-item-no-image">No Image</div>
