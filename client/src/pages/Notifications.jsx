@@ -3,6 +3,8 @@ import axios from "axios"
 import AdminLayout from "../components/AdminLayout"
 
 function Notifications() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
+
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState("")
@@ -10,7 +12,7 @@ function Notifications() {
   const fetchNotifications = async () => {
     try {
       setLoading(true)
-      const res = await axios.get("http://localhost:5000/api/orders")
+      const res = await axios.get(`${API_BASE}/api/orders`)
       setOrders(res.data || [])
       setLastUpdated(new Date().toLocaleTimeString("en-MY"))
     } catch (error) {
@@ -35,6 +37,7 @@ function Notifications() {
       let icon = "🛒"
       let title = "New Order"
       let message = `${order.customer_name} placed an order.`
+
       if (order.status === "Confirmed") {
         icon = "✅"
         title = "Order Confirmed"
@@ -45,6 +48,12 @@ function Notifications() {
         icon = "📦"
         title = "Order Completed"
         message = `Order #${order.id} has been completed.`
+      }
+
+      if (order.status === "Rejected") {
+        icon = "❌"
+        title = "Order Rejected"
+        message = `Order #${order.id} has been rejected.`
       }
 
       return {
@@ -61,12 +70,12 @@ function Notifications() {
 
   return (
     <AdminLayout>
-
       <div className="fishman-panel">
         <div className="panel-body">
           <div className="fm-orders-toolbar">
             <div>
               <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+                Auto refresh every 5 seconds
               </p>
             </div>
 

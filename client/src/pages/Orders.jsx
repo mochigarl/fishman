@@ -3,6 +3,8 @@ import axios from "axios"
 import AdminLayout from "../components/AdminLayout"
 
 function Orders() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
+
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState("All")
   const [search, setSearch] = useState("")
@@ -11,7 +13,7 @@ function Orders() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const res = await axios.get("http://localhost:5000/api/orders")
+      const res = await axios.get(`${API_BASE}/api/orders`)
       setOrders(res.data || [])
     } catch (error) {
       console.log("Failed to fetch orders:", error)
@@ -26,7 +28,7 @@ function Orders() {
 
   const updateStatus = async (id, status) => {
     try {
-      await axios.put(`http://localhost:5000/api/orders/${id}`, { status })
+      await axios.put(`${API_BASE}/api/orders/${id}`, { status })
       fetchOrders()
     } catch (error) {
       console.log("Failed to update status:", error)
@@ -39,7 +41,7 @@ function Orders() {
     if (!confirmed) return
 
     try {
-      await axios.delete(`http://localhost:5000/api/orders/${id}`)
+      await axios.delete(`${API_BASE}/api/orders/${id}`)
       fetchOrders()
     } catch (error) {
       console.log("Failed to delete order:", error)

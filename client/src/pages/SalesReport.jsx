@@ -5,6 +5,8 @@ import autoTable from "jspdf-autotable"
 import AdminLayout from "../components/AdminLayout"
 
 function SalesReport() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
+
   const [type, setType] = useState("daily")
   const [report, setReport] = useState({
     summary: {
@@ -21,9 +23,7 @@ function SalesReport() {
   const fetchReport = async (reportType = type) => {
     try {
       setLoading(true)
-      const res = await axios.get(
-        `http://localhost:5000/api/sales-report?type=${reportType}`
-      )
+      const res = await axios.get(`${API_BASE}/api/sales-report?type=${reportType}`)
       setReport(res.data)
       setLastUpdated(new Date().toLocaleString("en-MY"))
     } catch (error) {
@@ -90,8 +90,6 @@ function SalesReport() {
 
   return (
     <AdminLayout>
-      
-
       <div className="fm-card-topbar" style={{ marginBottom: "24px" }}>
         <div className="fm-card-head-gradient blue-grad">Report Type</div>
 

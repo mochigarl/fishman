@@ -14,6 +14,7 @@ import {
 
 function Dashboard() {
   const navigate = useNavigate()
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
 
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -26,7 +27,7 @@ function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/dashboard")
+      const res = await axios.get(`${API_BASE}/api/dashboard`)
       setStats(res.data)
     } catch (error) {
       console.log("Failed to fetch dashboard stats:", error)
@@ -45,7 +46,6 @@ function Dashboard() {
 
   return (
     <AdminLayout>
-
       <div className="fm-stats-grid-simple">
         <div
           className="fm-stat-card-simple stat-yellow"

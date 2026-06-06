@@ -5,6 +5,8 @@ import CustomerLayout from "../components/CustomerLayout"
 
 function TrackOrder() {
   const location = useLocation()
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
+
   const query = new URLSearchParams(location.search)
   const phone = query.get("phone") || ""
 
@@ -15,7 +17,7 @@ function TrackOrder() {
     if (!phone) return
 
     try {
-      const res = await axios.get(`http://localhost:5000/api/orders/phone/${phone}`)
+      const res = await axios.get(`${API_BASE}/api/orders/phone/${phone}`)
       setOrders(res.data || [])
     } catch (error) {
       console.log("Failed to fetch orders:", error)

@@ -12,7 +12,7 @@ function Weather() {
   const [error, setError] = useState("")
   const [liveTime, setLiveTime] = useState(new Date())
 
-  const API_BASE = "http://localhost:5000/api"
+  const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`
 
   const getWeatherInfoFromCode = (code, isDay = 1) => {
     const map = {
@@ -72,18 +72,6 @@ function Weather() {
     }
 
     return isDay ? "weather-bg-sunny" : "weather-bg-night"
-  }
-
-  const formatDateTime = (value) => {
-    if (!value) return "-"
-    return new Date(value).toLocaleString("en-MY", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    })
   }
 
   const formatLiveTime = (date, timeZone) => {
@@ -168,9 +156,7 @@ function Weather() {
       setLoading(true)
       setError("")
 
-      const res = await axios.get(
-        `${API_BASE}/weather-tide?lat=${lat}&lon=${lon}`
-      )
+      const res = await axios.get(`${API_BASE}/weather-tide?lat=${lat}&lon=${lon}`)
 
       setWeatherData(res.data)
 
@@ -243,185 +229,185 @@ function Weather() {
   const dailyData = weatherData?.forecast?.daily || []
   const timezone = weatherData?.location?.timezone
 
- return (
-  <AdminLayout>
-    <div className={`weather-dynamic-page ${weatherBgClass}`}>
-      <div className="weather-board no-sidebar">
-        <div className="weather-center full-width">
-          <div className="weather-searchbar">
-            <div className="weather-search-box">
-              <input
-                type="text"
-                placeholder="Search for a location"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") searchLocation()
-                }}
-              />
-              <button onClick={searchLocation} disabled={searching}>
-                {searching ? "Searching..." : "Search"}
+  return (
+    <AdminLayout>
+      <div className={`weather-dynamic-page ${weatherBgClass}`}>
+        <div className="weather-board no-sidebar">
+          <div className="weather-center full-width">
+            <div className="weather-searchbar">
+              <div className="weather-search-box">
+                <input
+                  type="text"
+                  placeholder="Search for a location"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") searchLocation()
+                  }}
+                />
+                <button onClick={searchLocation} disabled={searching}>
+                  {searching ? "Searching..." : "Search"}
+                </button>
+              </div>
+
+              <button className="weather-location-btn" onClick={handleUseMyLocation}>
+                Use My Location
               </button>
             </div>
 
-            <button className="weather-location-btn" onClick={handleUseMyLocation}>
-              Use My Location
-            </button>
-          </div>
-
-          {searchResults.length > 0 && (
-            <div className="weather-search-results">
-              {searchResults.map((item) => (
-                <button
-                  key={item.id}
-                  className="weather-search-result-item"
-                  onClick={() => handleSelectLocation(item)}
-                >
-                  {item.name}, {item.region}, {item.country}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {error && <div className="weather-error-box">{error}</div>}
-
-          {loading ? (
-            <div className="weather-card weather-loading-card">
-              <p>Loading weather and tide data...</p>
-            </div>
-          ) : weatherData ? (
-            <>
-              <div className="weather-hero-card">
-                <div className="weather-hero-left">
-                  <div className="weather-hero-city">
-                    {selectedLocation?.name || weatherData.location?.name || "Selected Location"}
-                  </div>
-                  <div className="weather-hero-sub">{currentWeatherInfo.text}</div>
-                  <div className="weather-hero-time">
-                    {formatLiveTime(liveTime, timezone)}
-                  </div>
-                  <div className="weather-hero-temp">
-                    {weatherData.weather?.airTemperature ?? "-"}°
-                  </div>
-                </div>
-
-                <div className="weather-hero-right">
-                  <div className="weather-hero-icon">{currentWeatherInfo.icon}</div>
-                </div>
+            {searchResults.length > 0 && (
+              <div className="weather-search-results">
+                {searchResults.map((item) => (
+                  <button
+                    key={item.id}
+                    className="weather-search-result-item"
+                    onClick={() => handleSelectLocation(item)}
+                  >
+                    {item.name}, {item.region}, {item.country}
+                  </button>
+                ))}
               </div>
+            )}
 
-              <div className="weather-hourly-card">
-                <div className="weather-card-title">Today's Forecast</div>
-                <div className="weather-hourly-row">
-                  {hourlyData.length > 0 ? (
-                    hourlyData.slice(0, 6).map((hour, index) => {
-                      const info = getWeatherInfoFromCode(hour.weatherCode, 1)
-                      return (
-                        <div className="weather-hourly-item" key={`${hour.time}-${index}`}>
-                          <span>{formatHour(hour.time, timezone)}</span>
-                          <div className="weather-hourly-icon">{info.icon}</div>
-                          <strong>{hour.temp ?? "-"}°</strong>
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <div className="weather-empty-box">No hourly forecast available.</div>
-                  )}
-                </div>
+            {error && <div className="weather-error-box">{error}</div>}
+
+            {loading ? (
+              <div className="weather-card weather-loading-card">
+                <p>Loading weather and tide data...</p>
               </div>
-
-              <div className="weather-bottom-grid">
-                <div className="weather-conditions-card">
-                  <div className="weather-card-title">Air & Marine Conditions</div>
-
-                  <div className="weather-conditions-grid">
-                    <div className="weather-condition-box">
-                      <span>Humidity</span>
-                      <strong>{weatherData.weather?.humidity ?? "-"}%</strong>
+            ) : weatherData ? (
+              <>
+                <div className="weather-hero-card">
+                  <div className="weather-hero-left">
+                    <div className="weather-hero-city">
+                      {selectedLocation?.name || weatherData.location?.name || "Selected Location"}
                     </div>
-
-                    <div className="weather-condition-box">
-                      <span>Wind</span>
-                      <strong>{weatherData.weather?.windSpeed ?? "-"} km/h</strong>
+                    <div className="weather-hero-sub">{currentWeatherInfo.text}</div>
+                    <div className="weather-hero-time">
+                      {formatLiveTime(liveTime, timezone)}
                     </div>
-
-                    <div className="weather-condition-box">
-                      <span>Wind Dir</span>
-                      <strong>{degreeToDirectionLabel(weatherData.weather?.windDirection)}</strong>
+                    <div className="weather-hero-temp">
+                      {weatherData.weather?.airTemperature ?? "-"}°
                     </div>
+                  </div>
 
-                    <div className="weather-condition-box">
-                      <span>Precipitation</span>
-                      <strong>{weatherData.weather?.precipitation ?? "-"} mm</strong>
-                    </div>
-
-                    <div className="weather-condition-box">
-                      <span>Cloud Cover</span>
-                      <strong>{weatherData.weather?.cloudCover ?? "-"}%</strong>
-                    </div>
-
-                    <div className="weather-condition-box">
-                      <span>Timezone</span>
-                      <strong>{weatherData.location?.timezone || "-"}</strong>
-                    </div>
-
-                    <div className="weather-condition-box">
-                      <span>Current Tide</span>
-                      <strong>{weatherData.tide?.current_level_m ?? "-"} m</strong>
-                    </div>
-
-                    <div className="weather-condition-box">
-                      <span>Next High Tide</span>
-                      <strong>{weatherData.tide?.next_high?.height_m ?? "-"} m</strong>
-                    </div>
-
-                    <div className="weather-condition-box">
-                      <span>Next Low Tide</span>
-                      <strong>{weatherData.tide?.next_low?.height_m ?? "-"} m</strong>
-                    </div>
-
-                    <div className="weather-condition-box">
-                      <span>Tide Trend</span>
-                      <strong>{weatherData.tide?.trend || "-"}</strong>
-                    </div>
+                  <div className="weather-hero-right">
+                    <div className="weather-hero-icon">{currentWeatherInfo.icon}</div>
                   </div>
                 </div>
 
-                <div className="weather-week-card">
-                  <div className="weather-card-title">7-Day Forecast</div>
-
-                  <div className="weather-week-list">
-                    {dailyData.length > 0 ? (
-                      dailyData.map((day, index) => {
-                        const info = getWeatherInfoFromCode(day.weatherCode, 1)
+                <div className="weather-hourly-card">
+                  <div className="weather-card-title">Today's Forecast</div>
+                  <div className="weather-hourly-row">
+                    {hourlyData.length > 0 ? (
+                      hourlyData.slice(0, 6).map((hour, index) => {
+                        const info = getWeatherInfoFromCode(hour.weatherCode, 1)
                         return (
-                          <div className="weather-week-item" key={`${day.date}-${index}`}>
-                            <span className="weather-week-day">{formatDay(day.date)}</span>
-                            <span className="weather-week-icon">{info.icon}</span>
-                            <span className="weather-week-text">{info.text}</span>
-                            <span className="weather-week-temp">
-                              {day.maxTemp ?? "-"}° / {day.minTemp ?? "-"}°
-                            </span>
+                          <div className="weather-hourly-item" key={`${hour.time}-${index}`}>
+                            <span>{formatHour(hour.time, timezone)}</span>
+                            <div className="weather-hourly-icon">{info.icon}</div>
+                            <strong>{hour.temp ?? "-"}°</strong>
                           </div>
                         )
                       })
                     ) : (
-                      <div className="weather-empty-box">No 7-day forecast available.</div>
+                      <div className="weather-empty-box">No hourly forecast available.</div>
                     )}
                   </div>
                 </div>
+
+                <div className="weather-bottom-grid">
+                  <div className="weather-conditions-card">
+                    <div className="weather-card-title">Air & Marine Conditions</div>
+
+                    <div className="weather-conditions-grid">
+                      <div className="weather-condition-box">
+                        <span>Humidity</span>
+                        <strong>{weatherData.weather?.humidity ?? "-"}%</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Wind</span>
+                        <strong>{weatherData.weather?.windSpeed ?? "-"} km/h</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Wind Dir</span>
+                        <strong>{degreeToDirectionLabel(weatherData.weather?.windDirection)}</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Precipitation</span>
+                        <strong>{weatherData.weather?.precipitation ?? "-"} mm</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Cloud Cover</span>
+                        <strong>{weatherData.weather?.cloudCover ?? "-"}%</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Timezone</span>
+                        <strong>{weatherData.location?.timezone || "-"}</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Current Tide</span>
+                        <strong>{weatherData.tide?.current_level_m ?? "-"} m</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Next High Tide</span>
+                        <strong>{weatherData.tide?.next_high?.height_m ?? "-"} m</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Next Low Tide</span>
+                        <strong>{weatherData.tide?.next_low?.height_m ?? "-"} m</strong>
+                      </div>
+
+                      <div className="weather-condition-box">
+                        <span>Tide Trend</span>
+                        <strong>{weatherData.tide?.trend || "-"}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="weather-week-card">
+                    <div className="weather-card-title">7-Day Forecast</div>
+
+                    <div className="weather-week-list">
+                      {dailyData.length > 0 ? (
+                        dailyData.map((day, index) => {
+                          const info = getWeatherInfoFromCode(day.weatherCode, 1)
+                          return (
+                            <div className="weather-week-item" key={`${day.date}-${index}`}>
+                              <span className="weather-week-day">{formatDay(day.date)}</span>
+                              <span className="weather-week-icon">{info.icon}</span>
+                              <span className="weather-week-text">{info.text}</span>
+                              <span className="weather-week-temp">
+                                {day.maxTemp ?? "-"}° / {day.minTemp ?? "-"}°
+                              </span>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <div className="weather-empty-box">No 7-day forecast available.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="weather-card weather-loading-card">
+                <p>No weather data yet.</p>
               </div>
-            </>
-          ) : (
-            <div className="weather-card weather-loading-card">
-              <p>No weather data yet.</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  </AdminLayout>
-)
+    </AdminLayout>
+  )
 }
 
 export default Weather

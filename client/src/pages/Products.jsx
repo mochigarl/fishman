@@ -11,6 +11,8 @@ const initialForm = {
 }
 
 function Products() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
+
   const [products, setProducts] = useState([])
   const [form, setForm] = useState(initialForm)
   const [image, setImage] = useState(null)
@@ -22,7 +24,7 @@ function Products() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const res = await axios.get("http://localhost:5000/api/products")
+      const res = await axios.get(`${API_BASE}/api/products`)
       setProducts(res.data)
     } catch (error) {
       console.log("Failed to fetch products:", error)
@@ -62,9 +64,9 @@ function Products() {
       }
 
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/products/${editingId}`, formData)
+        await axios.put(`${API_BASE}/api/products/${editingId}`, formData)
       } else {
-        await axios.post("http://localhost:5000/api/products", formData)
+        await axios.post(`${API_BASE}/api/products`, formData)
       }
 
       resetForm()
@@ -93,7 +95,7 @@ function Products() {
     if (!confirmDelete) return
 
     try {
-      await axios.delete(`http://localhost:5000/api/products/${id}`)
+      await axios.delete(`${API_BASE}/api/products/${id}`)
       fetchProducts()
     } catch (error) {
       console.log("Failed to delete product:", error)
@@ -139,8 +141,6 @@ function Products() {
 
   return (
     <AdminLayout>
-      
-
       <div className="fm-card-topbar" style={{ marginBottom: "24px" }}>
         <div className="fm-card-head-gradient orange-grad">
           {editingId ? "Edit Product" : "Add Product"}
@@ -280,7 +280,7 @@ function Products() {
                   <div className="fm-product-image-wrap">
                     {product.image ? (
                       <img
-                        src={`http://localhost:5000/uploads/${product.image}`}
+                        src={`${API_BASE}/uploads/${product.image}`}
                         alt={product.name}
                         className="fm-product-image"
                       />

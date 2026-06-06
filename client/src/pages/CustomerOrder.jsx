@@ -5,6 +5,7 @@ import CustomerLayout from "../components/CustomerLayout"
 
 function CustomerOrder() {
   const location = useLocation()
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
 
   const query = new URLSearchParams(location.search)
   const mode = query.get("mode") || "guest"
@@ -27,7 +28,7 @@ function CustomerOrder() {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/products")
+      const res = await axios.get(`${API_BASE}/api/products`)
       setProducts(res.data)
     } catch (error) {
       console.log("Failed to fetch products:", error)
@@ -152,7 +153,7 @@ function CustomerOrder() {
                 <div className="cust-card-image-wrap">
                   {product.image ? (
                     <img
-                      src={`http://localhost:5000/uploads/${product.image}`}
+                      src={`${API_BASE}/uploads/${product.image}`}
                       alt={product.name}
                       className="cust-card-image"
                     />
