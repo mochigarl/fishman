@@ -65,10 +65,52 @@ function MyOrders() {
                   <div className="cart-receipt-items">
                     {Array.isArray(order.items) &&
                       order.items.map((item, index) => (
-                        <div className="cart-receipt-row" key={index}>
-                          <span>
-                            {item.name} x {item.quantity}
-                          </span>
+                        <div
+                          className="cart-receipt-row"
+                          key={index}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "12px",
+                            marginBottom: "12px"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            {item.image ? (
+                              <img
+                                src={`${API_BASE}/uploads/${item.image}`}
+                                alt={item.name}
+                                style={{
+                                  width: "56px",
+                                  height: "56px",
+                                  objectFit: "cover",
+                                  borderRadius: "10px"
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: "56px",
+                                  height: "56px",
+                                  borderRadius: "10px",
+                                  background: "#f3f4f6",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px",
+                                  color: "#6b7280"
+                                }}
+                              >
+                                No Image
+                              </div>
+                            )}
+
+                            <span>
+                              {item.name} x {item.quantity}
+                            </span>
+                          </div>
+
                           <span>
                             RM {(Number(item.price) * Number(item.quantity)).toFixed(2)}
                           </span>
