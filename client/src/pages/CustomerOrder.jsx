@@ -15,6 +15,7 @@ function CustomerOrder() {
   const [search, setSearch] = useState("")
   const [cartCount, setCartCount] = useState(0)
   const [categoryFilter, setCategoryFilter] = useState("All")
+  const [toast, setToast] = useState("")
 
   const cartKey = useMemo(() => {
     return mode === "phone" && phone
@@ -47,6 +48,13 @@ function CustomerOrder() {
     refreshCartCount()
   }, [cartKey])
 
+  const showToast = (message) => {
+    setToast(message)
+    setTimeout(() => {
+      setToast("")
+    }, 2000)
+  }
+
   const addToCart = (product) => {
     const storage = getStorage()
     const saved = JSON.parse(storage.getItem(cartKey) || "[]")
@@ -75,6 +83,7 @@ function CustomerOrder() {
 
     storage.setItem(cartKey, JSON.stringify(updatedCart))
     refreshCartCount()
+    showToast(`${product.name} added to cart successfully`)
   }
 
   const getProductBadge = (product) => {
@@ -123,6 +132,8 @@ function CustomerOrder() {
       onSearchChange={setSearch}
       cartCount={cartCount}
     >
+      {toast && <div className="cust-toast">{toast}</div>}
+
       <section className="cust-chip-row">
         {categories.map((category) => (
           <button
