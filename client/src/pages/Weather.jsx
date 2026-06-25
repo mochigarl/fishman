@@ -343,13 +343,6 @@ function Weather() {
       <h2 className="weather-safety-title">{safetyStatus.label}</h2>
     </div>
 
-    <div className="weather-safety-icon">
-      {safetyStatus.label === "Safe" && "✅"}
-      {safetyStatus.label === "Caution" && "⚠️"}
-      {safetyStatus.label === "Dangerous" && "🚫"}
-    </div>
-  </div>
-
   <p className="weather-safety-message">{safetyStatus.message}</p>
 
   <div className="weather-safety-meta-grid">
