@@ -336,14 +336,14 @@ function Weather() {
                   </div>
                 </div>
 
-               <div className={`weather-safety-card ${safetyStatus.className}`}>
+                <div className={`weather-safety-card ${safetyStatus.className}`}>
   <div className="weather-safety-top">
     <div>
       <p className="weather-safety-label">Fishing Safety Status</p>
       <h2 className="weather-safety-title">{safetyStatus.label}</h2>
     </div>
 
-      <div className="weather-safety-icon">
+    <div className="weather-safety-icon">
       {safetyStatus.label === "Safe" && "✅"}
       {safetyStatus.label === "Caution" && "⚠️"}
       {safetyStatus.label === "Dangerous" && "🚫"}
