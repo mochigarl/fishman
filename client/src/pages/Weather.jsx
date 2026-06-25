@@ -336,17 +336,39 @@ function Weather() {
                   </div>
                 </div>
 
-                <div className={`weather-safety-card ${safetyStatus.className}`}>
-                  <div className="weather-card-title">Fishing Safety Status</div>
-                  <div className="weather-safety-status">{safetyStatus.label}</div>
-                  <p>{safetyStatus.message}</p>
+               <div className={`weather-safety-card ${safetyStatus.className}`}>
+  <div className="weather-safety-top">
+    <div>
+      <p className="weather-safety-label">Fishing Safety Status</p>
+      <h2 className="weather-safety-title">{safetyStatus.label}</h2>
+    </div>
 
-                  <div className="weather-safety-meta">
-                    <span>Wind Speed: {weatherData?.weather?.windSpeed ?? "-"} km/h</span>
-                    <span>Precipitation: {weatherData?.weather?.precipitation ?? "-"} mm</span>
-                    <span>Condition: {currentWeatherInfo.text}</span>
-                  </div>
-                </div>
+    <div className="weather-safety-icon">
+      {safetyStatus.label === "Safe" && "✅"}
+      {safetyStatus.label === "Caution" && "⚠️"}
+      {safetyStatus.label === "Dangerous" && "🚫"}
+    </div>
+  </div>
+
+  <p className="weather-safety-message">{safetyStatus.message}</p>
+
+  <div className="weather-safety-meta-grid">
+    <div className="weather-safety-meta-box">
+      <span>Wind Speed</span>
+      <strong>{weatherData?.weather?.windSpeed ?? "-"} km/h</strong>
+    </div>
+
+    <div className="weather-safety-meta-box">
+      <span>Precipitation</span>
+      <strong>{weatherData?.weather?.precipitation ?? "-"} mm</strong>
+    </div>
+
+    <div className="weather-safety-meta-box">
+      <span>Condition</span>
+      <strong>{currentWeatherInfo.text}</strong>
+    </div>
+  </div>
+</div>
 
                 <div className="weather-hourly-card">
                   <div className="weather-card-title">Today's Forecast</div>
